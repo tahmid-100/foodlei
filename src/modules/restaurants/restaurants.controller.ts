@@ -1,11 +1,12 @@
 // src/modules/restaurants/restaurants.controller.ts
 import {
   Controller, Get, Post, Body, Patch,
-  Param, Delete, ParseIntPipe, HttpCode, HttpStatus,
+  Param, Delete, ParseIntPipe, HttpCode, HttpStatus,Query,
 } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
+import { FilterRestaurantDto } from './dto/filter-restaurant.dto';
 
 @Controller({ path: 'restaurants', version: '1' }) // → /api/v1/restaurants
 export class RestaurantsController {
@@ -18,8 +19,8 @@ export class RestaurantsController {
   }
 
   @Get()
-  findAll() {
-    return this.restaurantsService.findAll();
+  findAll(@Query() filters: FilterRestaurantDto) {
+    return this.restaurantsService.findAll(filters);
   }
 
   @Get(':id')

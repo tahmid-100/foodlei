@@ -1,21 +1,25 @@
 // src/modules/restaurants/restaurants-v2.controller.ts
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
+import { FilterRestaurantDto } from './dto/filter-restaurant.dto';
 
 @Controller({ path: 'restaurants', version: '2' })
 export class RestaurantsV2Controller {
   constructor(private readonly restaurantsService: RestaurantsService) {}
 
   @Get()
-  async findAll() {
-    const restaurants = await this.restaurantsService.findAll();
+  async findAll(@Query() filters: FilterRestaurantDto) {
+   const response = await this.restaurantsService.findAll(filters);
 
     // v2 তে extra field যোগ করলাম
-    return restaurants.map((r) => ({
+   return {
+    ...response,
+    data: response.data.map((r) => ({
       ...r,
-      menuCount: 0,          // পরে real data আসবে
+      menuCount: 0,
       displayName: r.name,
-    }));
+    })),
+  };
   }
 
   @Get('search')

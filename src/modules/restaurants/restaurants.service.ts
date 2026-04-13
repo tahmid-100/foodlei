@@ -1,10 +1,12 @@
 // src/modules/restaurants/restaurants.service.ts
 import { Injectable, NotFoundException,ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository ,Like} from 'typeorm';
+import { Repository ,ILike,Like} from 'typeorm';
 import { Restaurant } from './restaurant.entity';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
+import { FilterRestaurantDto } from './dto/filter-restaurant.dto';
+import { PaginatedResponse } from '../../common/interfaces/paginated-response.interface';
 
 @Injectable()
 export class RestaurantsService {
@@ -28,12 +30,58 @@ export class RestaurantsService {
     return this.restaurantRepository.save(restaurant);
   }
 
-  async findAll(): Promise<Restaurant[]> {
-    return this.restaurantRepository.find({
-      where: { isActive: true },
-      order: { createdAt: 'DESC' },
-    });
+   async findAll(
+    filters: FilterRestaurantDto,
+  ): Promise<PaginatedResponse<Restaurant>> {
+    const { search, isActive, sortBy, sortOrder, page, limit, skip } = filters;
+
+    // Dynamic where condition বানাই
+    const whereConditions: any = {};
+
+    if (isActive !== undefined) {
+      whereConditions.isActive = isActive;
+    } else {
+      whereConditions.isActive = true; // default: শুধু active গুলো
+    }
+
+    // Search — name অথবা address এ
+    // ILike → case-insensitive LIKE
+    const queryBuilder = this.restaurantRepository.createQueryBuilder('r');
+
+    queryBuilder
+      .where('r.isActive = :isActive', {
+        isActive: whereConditions.isActive,
+      });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(r.name ILIKE :search OR r.address ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+// একটাই query — দুটো result একসাথে
+const [data, total] = await queryBuilder
+  .orderBy(`r.${sortBy}`, sortOrder)
+  .skip(skip)
+  .take(limit)
+  .getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
+
 
   async findOne(id: number): Promise<Restaurant> {
     const restaurant = await this.restaurantRepository.findOne({
