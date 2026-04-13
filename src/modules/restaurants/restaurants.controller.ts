@@ -7,7 +7,7 @@ import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 
-@Controller('restaurants')  // → /api/restaurants
+@Controller({ path: 'restaurants', version: '1' }) // → /api/v1/restaurants
 export class RestaurantsController {
   constructor(private readonly restaurantsService: RestaurantsService) {}
 

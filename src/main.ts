@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe ,VersioningType} from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -16,6 +16,15 @@ async function bootstrap() {
       transform: true,        // string থেকে number এ auto convert
     }),
   );
+   
+
+    // Versioning enable করো
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',      // version না দিলে v1 ধরবে
+  });
+
+    
 
     // CORS — frontend থেকে call করতে পারবে
   app.enableCors();

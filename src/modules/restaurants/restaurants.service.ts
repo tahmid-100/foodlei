@@ -1,7 +1,7 @@
 // src/modules/restaurants/restaurants.service.ts
 import { Injectable, NotFoundException,ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository ,Like} from 'typeorm';
 import { Restaurant } from './restaurant.entity';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
@@ -59,4 +59,17 @@ export class RestaurantsService {
     restaurant.isActive = false;
     await this.restaurantRepository.save(restaurant);
   }
+
+  async searchByName(name:string):Promise<Restaurant[]>{
+
+    return this.restaurantRepository.find({
+      where: {
+        name: Like(`%${name}%`),  // Case-sensitive like search
+        isActive: true,
+      },
+      order: { name: 'ASC' },
+    });
+
+  }
 }
+
