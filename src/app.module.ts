@@ -5,6 +5,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -34,9 +36,33 @@ import { RestaurantsModule } from './modules/restaurants/restaurants.module';
       inject: [ConfigService],
     }),
 
+         
+  ThrottlerModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (config: ConfigService) => ([
+    {
+      name: 'short',
+      ttl: config.get<number>('THROTTLE_TTL')??6000,
+      limit: config.get<number>('THROTTLE_LIMIT')??100,
+    },
+    ]),
+   }), 
+
+
+
     RestaurantsModule,
 
 
+  ],
+
+
+    providers: [
+    // Global guard — সব route এ automatically apply হবে
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 
 })

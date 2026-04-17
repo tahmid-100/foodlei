@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe ,VersioningType} from '@nestjs/common';
 import { AppModule } from './app.module';
+import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
+
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -33,5 +36,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`🚀 Foodeli Backend running on: http://localhost:${port}/api`);
+
+  app.useGlobalFilters(new ThrottlerExceptionFilter());
 }
 bootstrap();
