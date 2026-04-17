@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe ,VersioningType} from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 
 
@@ -31,6 +32,35 @@ async function bootstrap() {
 
     // CORS — frontend থেকে call করতে পারবে
   app.enableCors();
+
+
+    // ── Swagger Setup ──────────────────────────────
+  const config = new DocumentBuilder()
+    .setTitle('Foodeli API')
+    .setDescription('Food Ordering System — Backend API Documentation')
+    .setVersion('1.0')
+    .addBearerAuth(          // JWT auth button দেখাবে (পরে কাজে লাগবে)
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'JWT',
+    )
+    .addTag('restaurants', 'Restaurant management')
+    .addTag('menus', 'Menu management')
+    .addTag('orders', 'Order management')
+    .addTag('auth', 'Authentication')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,    // page refresh এ token থাকে
+    },
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+  }
 
   
   const port = process.env.PORT || 3000;
