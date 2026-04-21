@@ -14,7 +14,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class Restaurant {
   @ApiProperty({ example: 1 })
   @PrimaryGeneratedColumn()
-  id?: number;
+  id!: number;
   
   @ApiProperty({ example: 'Dhaka Biryani House' })
   @Column({ length: 100 })
@@ -26,11 +26,11 @@ export class Restaurant {
 
   @ApiProperty({ example: '01711234567' })
   @Column({ length: 20})
-  phone?: string;
+  phone!: string;
 
  @ApiProperty({ example: true })
   @Column({ default: true })
-  isActive?: boolean;
+  isActive!: boolean;
 
   @ApiProperty()
   @CreateDateColumn()

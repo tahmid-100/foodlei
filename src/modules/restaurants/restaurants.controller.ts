@@ -1,7 +1,7 @@
 // src/modules/restaurants/restaurants.controller.ts
 import {
   Controller, Get, Post, Body, Patch,
-  Param, Delete, ParseIntPipe, HttpCode, HttpStatus,Query,
+  Param, Delete, ParseIntPipe, HttpCode, HttpStatus,Query,UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -15,6 +15,7 @@ import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { FilterRestaurantDto } from './dto/filter-restaurant.dto';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { Restaurant } from './restaurant.entity';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @ApiTags('restaurants')          // Swagger তে group করবে
 @Controller({ path: 'restaurants', version: '1' }) // → /api/v1/restaurants
 export class RestaurantsController {
@@ -23,6 +24,7 @@ export class RestaurantsController {
   @Post()
   @Throttle({ short: { ttl: 10000, limit: 3 } })
   @HttpCode(HttpStatus.CREATED)  // 201
+  @UseGuards(JwtAuthGuard)  
   @ApiOperation({ summary: 'নতুন restaurant তৈরি করো' })
   @ApiResponse({ status: 201, description: 'Restaurant তৈরি হয়েছে', type: Restaurant })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
@@ -52,6 +54,7 @@ export class RestaurantsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Restaurant আংশিক update করো' })
+  @UseGuards(JwtAuthGuard)  
   @ApiParam({ name: 'id', description: 'Restaurant ID' })
   @ApiResponse({ status: 200, description: 'Updated successfully', type: Restaurant })
   update(
@@ -63,6 +66,7 @@ export class RestaurantsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)  // 204 — body নেই
+  @UseGuards(JwtAuthGuard)  
   @ApiOperation({ summary: 'Restaurant soft delete করো' })
   @ApiResponse({ status: 204, description: 'Deleted successfully' })
   @ApiResponse({ status: 404, description: 'Restaurant not found' })
