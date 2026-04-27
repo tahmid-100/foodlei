@@ -10,6 +10,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
+import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
@@ -37,4 +38,24 @@ export class AuthController {
     const { password, ...result } = user as any;
     return result;
   }
+
+
+@Post('logout')
+@UseGuards(JwtAuthGuard)
+@HttpCode(HttpStatus.OK)
+@ApiBearerAuth('JWT')
+@ApiOperation({ summary: 'Logout করো' })
+logout(@CurrentUser() user: User) {
+  return this.authService.logout(user.id);
+}
+
+@Post('refresh')
+@UseGuards(JwtRefreshGuard)
+@HttpCode(HttpStatus.OK)
+@ApiBearerAuth('JWT')
+@ApiOperation({ summary: 'নতুন Access Token নাও' })
+refresh(@CurrentUser() user: any) {
+  return this.authService.refreshTokens(user.sub, user.refreshToken);
+}
+  
 }

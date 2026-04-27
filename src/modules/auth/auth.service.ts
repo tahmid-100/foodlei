@@ -1,7 +1,6 @@
 // src/modules/auth/auth.service.ts
 import {
-  Injectable, UnauthorizedException,
-  ConflictException, BadRequestException,
+  Injectable, UnauthorizedException, ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,19 +21,19 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Email already আছে কিনা check
     const existing = await this.userRepository.findOne({
       where: { email: dto.email },
     });
     if (existing) {
-      throw new ConflictException('এই email দিয়ে already account আছে');
+      throw new ConflictException('This email already exists');
     }
 
     const user = this.userRepository.create(dto);
     await this.userRepository.save(user);
-    // @BeforeInsert() automatically password hash করে দেবে
 
     const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+
     return {
       message: 'Registration successful',
       user: this.sanitizeUser(user),
@@ -43,23 +42,18 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // User খোঁজো
     const user = await this.userRepository.findOne({
       where: { email: dto.email, isActive: true },
     });
 
-    if (!user) {
-      // "email বা password ভুল" — কোনটা ভুল সেটা বলো না (security)
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    // Password check
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
 
     const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);  // ← DB তে save
+
     return {
       message: 'Login successful',
       user: this.sanitizeUser(user),
@@ -67,16 +61,44 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(userId: number) {
+  async logout(userId: number) {
+    // DB থেকে refresh token মুছে দাও
+    await this.userRepository.update(userId, { hashedRefreshToken: null });
+    return { message: 'Logged out successfully' };
+  }
+
+  async refreshTokens(userId: number, refreshToken: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId, isActive: true },
     });
-    if (!user) throw new UnauthorizedException('User not found');
 
-    return this.generateTokens(user);
+    // Token আছে কিনা check
+    if (!user || !user.hashedRefreshToken) {
+      throw new UnauthorizedException('Access Denied');
+    }
+
+    // DB এর hash এর সাথে মেলাও
+    const tokenMatches = await bcrypt.compare(
+      refreshToken,
+      user.hashedRefreshToken,
+    );
+
+    if (!tokenMatches) {
+      throw new UnauthorizedException('Access Denied — invalid refresh token');
+    }
+
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken); // rotate করো
+    return tokens;
   }
 
-  // ── Private helpers ────────────────────────────
+  // ── Private helpers ──────────────────────────
+
+  private async saveRefreshToken(userId: number, refreshToken: string) {
+    // Plain text কখনো রাখব না — hash করে রাখো
+    const hashed = await bcrypt.hash(refreshToken, 10);
+    await this.userRepository.update(userId, { hashedRefreshToken: hashed });
+  }
 
   private async generateTokens(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role };
@@ -96,8 +118,7 @@ export class AuthService {
   }
 
   private sanitizeUser(user: User) {
-    // password বাদে বাকি সব return করো
-    const { password, ...result } = user;
+    const { password, hashedRefreshToken, ...result } = user as any;
     return result;
   }
 }

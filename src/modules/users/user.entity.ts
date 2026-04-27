@@ -39,6 +39,10 @@ export class User {
   @UpdateDateColumn()
   updatedAt?: Date;
 
+  @Column({ nullable: true })
+  @Exclude()
+  hashedRefreshToken?: string | null;  // hash করে রাখব, plain text না
+
   // Save এর আগে automatically password hash হবে
   @BeforeInsert()
   async hashPassword() {
