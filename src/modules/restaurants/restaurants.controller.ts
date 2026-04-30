@@ -1,7 +1,7 @@
 // src/modules/restaurants/restaurants.controller.ts
 import {
   Controller, Get, Post, Body, Patch,
-  Param, Delete, ParseIntPipe, HttpCode, HttpStatus,Query,UseGuards,
+  Param, Delete, ParseIntPipe, HttpCode, HttpStatus, Query, UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -16,15 +16,19 @@ import { FilterRestaurantDto } from './dto/filter-restaurant.dto';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { Restaurant } from './restaurant.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../users/user.entity';
 @ApiTags('restaurants')          // Swagger তে group করবে
 @Controller({ path: 'restaurants', version: '1' }) // → /api/v1/restaurants
 export class RestaurantsController {
-  constructor(private readonly restaurantsService: RestaurantsService) {}
+  constructor(private readonly restaurantsService: RestaurantsService) { }
 
   @Post()
   @Throttle({ short: { ttl: 10000, limit: 3 } })
   @HttpCode(HttpStatus.CREATED)  // 201
-  @UseGuards(JwtAuthGuard)  
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
   @ApiOperation({ summary: 'নতুন restaurant তৈরি করো' })
   @ApiResponse({ status: 201, description: 'Restaurant তৈরি হয়েছে', type: Restaurant })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
@@ -33,11 +37,11 @@ export class RestaurantsController {
     return this.restaurantsService.create(dto);
   }
 
-  
+
   @Get()
   @ApiOperation({ summary: 'সব restaurants এর list (paginated)' })
   @ApiResponse({ status: 200, description: 'Paginated restaurant list' })
-  @SkipThrottle() 
+  @SkipThrottle()
   findAll(@Query() filters: FilterRestaurantDto) {
     return this.restaurantsService.findAll(filters);
   }
@@ -54,7 +58,7 @@ export class RestaurantsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Restaurant আংশিক update করো' })
-  @UseGuards(JwtAuthGuard)  
+  @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'id', description: 'Restaurant ID' })
   @ApiResponse({ status: 200, description: 'Updated successfully', type: Restaurant })
   update(
@@ -66,7 +70,8 @@ export class RestaurantsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)  // 204 — body নেই
-  @UseGuards(JwtAuthGuard)  
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)   // শুধু ADMIN delete করতে পারবে 
   @ApiOperation({ summary: 'Restaurant soft delete করো' })
   @ApiResponse({ status: 204, description: 'Deleted successfully' })
   @ApiResponse({ status: 404, description: 'Restaurant not found' })
