@@ -1,7 +1,11 @@
 // src/modules/users/user.entity.ts
 import {
-  Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn, BeforeInsert,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
@@ -20,12 +24,12 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   name?: string;
 
-  @Column()
-  @Exclude()   // Response এ password কখনো যাবে না
-  password !: string;
+  @Column({ type: 'varchar', nullable: true })
+  @Exclude()
+  password!: string | null;  // type ঠিক করুন
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
   role!: UserRole;
@@ -33,19 +37,27 @@ export class User {
   @Column({ default: true })
   isActive!: boolean;
 
+  // ✅ Google OAuth এর জন্য নতুন fields
+  @Column({ nullable: true, unique: true })
+  googleId?: string;
+
+  @Column({ nullable: true })
+  avatar?: string;
+
   @CreateDateColumn()
   createdAt?: Date;
 
   @UpdateDateColumn()
   updatedAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   @Exclude()
-  hashedRefreshToken?: string | null;  // hash করে রাখব, plain text না
+  hashedRefreshToken?: string | null;
 
-  // Save এর আগে automatically password hash হবে
   @BeforeInsert()
   async hashPassword() {
-    this.password = await bcrypt.hash(this.password, 12);
+    if (this.password) {
+      this.password = await bcrypt.hash(this.password, 12);
+    }
   }
 }
