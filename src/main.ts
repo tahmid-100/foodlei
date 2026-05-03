@@ -1,72 +1,66 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe ,VersioningType} from '@nestjs/common';
-import { AppModule } from './app.module';
-import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
+import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-
-
+import helmet from 'helmet';
+import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
-    // Global prefix — সব route /api দিয়ে শুরু হবে
+  // 1. Security Headers
+  app.use(helmet());
+
+  // 2. CORS
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3001'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
+  // 3. Global Prefix + Versioning
   app.setGlobalPrefix('api');
-
-    // Validation — আমরা পরে ব্যবহার করব
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,        // extra fields automatically strip হবে
-      forbidNonWhitelisted: true,
-      transform: true,        // string থেকে number এ auto convert
-    }),
-  );
-   
-
-    // Versioning enable করো
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1',      // version না দিলে v1 ধরবে
+    defaultVersion: '1',
   });
 
-    
+  // 4. Validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
-    // CORS — frontend থেকে call করতে পারবে
-  app.enableCors();
+  // 5. Global Exception Filter
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(),
+    new ThrottlerExceptionFilter(),
+  );
 
-
-    // ── Swagger Setup ──────────────────────────────
-  const config = new DocumentBuilder()
-    .setTitle('Foodeli API')
-    .setDescription('Food Ordering System — Backend API Documentation')
-    .setVersion('1.0')
-    .addBearerAuth(          // JWT auth button দেখাবে (পরে কাজে লাগবে)
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'JWT',
-    )
-    .addTag('restaurants', 'Restaurant management')
-    .addTag('menus', 'Menu management')
-    .addTag('orders', 'Order management')
-    .addTag('auth', 'Authentication')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,    // page refresh এ token থাকে
-    },
-  });
-
+  // 6. Swagger (non-production only)
   if (process.env.NODE_ENV !== 'production') {
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    const config = new DocumentBuilder()
+      .setTitle('Foodeli API')
+      .setDescription('Food Ordering System')
+      .setVersion('1.0')
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+    logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
   }
 
-  
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`🚀 Foodeli Backend running on: http://localhost:${port}/api`);
-
-  app.useGlobalFilters(new ThrottlerExceptionFilter());
+  logger.log(`🚀 Foodeli running on port ${port}`);
 }
 bootstrap();
