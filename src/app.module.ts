@@ -4,11 +4,16 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { BullModule } from '@nestjs/bullmq';
+import { QUEUES } from './common/constants/queue.constants';
 
 @Module({
   imports: [
@@ -50,6 +55,18 @@ import { OrdersModule } from './modules/orders/orders.module';
     },
     ]),
    }), 
+
+   BullModule.forRoot({
+  connection: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+   },
+   }),
+
+   BullBoardModule.forFeature({
+  name: QUEUES.ORDER,
+  adapter: BullMQAdapter,
+}),
 
 
 

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { Menu } from '../menus/menu.entity';
@@ -12,6 +14,8 @@ import { User, UserRole } from '../users/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderStateMachineService } from './order-state-machine.service';
+import { QUEUES, ORDER_JOBS } from '../../common/constants/queue.constants';
+import { OrderStatus } from './enums/order-status.enum';
 
 @Injectable()
 export class OrdersService {
@@ -21,6 +25,8 @@ export class OrdersService {
     @InjectRepository(Menu)
     private readonly menuRepository: Repository<Menu>,
     private readonly stateMachine: OrderStateMachineService,
+    @InjectQueue(QUEUES.ORDER)
+    private readonly orderQueue: Queue,   // ← Queue inject
   ) {}
 
   async create(dto: CreateOrderDto, customer: User): Promise<Order> {
@@ -63,7 +69,39 @@ export class OrdersService {
       items: orderItems as OrderItem[],
     });
 
-    return this.orderRepository.save(order);
+       const saved = await this.orderRepository.save(order);
+
+    // ── Queue এ job add করো ──────────────────────
+    await this.orderQueue.add(
+      ORDER_JOBS.SEND_CONFIRMATION,
+      {
+        orderId: saved.id,
+        customerEmail: customer.email,
+        totalAmount: saved.totalAmount,
+      },
+      {
+        attempts: 3,           // fail হলে ৩ বার retry
+        backoff: {
+          type: 'exponential', // retry delay বাড়তে থাকবে
+          delay: 2000,         // 2s, 4s, 8s
+        },
+        removeOnComplete: 100, // শেষ ১০০টা completed job রাখো
+        removeOnFail: 50,      // শেষ ৫০টা failed job রাখো
+      }
+    );
+
+    await this.orderQueue.add(
+      ORDER_JOBS.NOTIFY_RESTAURANT,
+      {
+        orderId: saved.id,
+        restaurantId: saved.restaurantId,
+        items: saved.items,
+      },
+      { attempts: 3 }
+    );
+    
+
+    return saved;
   }
 
   async findMyOrders(customerId: number): Promise<Order[]> {
@@ -82,6 +120,11 @@ export class OrdersService {
 
     if (!order) throw new NotFoundException(`Order #${id} not found`);
 
+    if (order?.customer) {
+       delete (order.customer as any).password;
+      delete (order.customer as any).hashedRefreshToken;
+      }
+
     // Customer শুধু নিজের order দেখতে পারবে
     if (
       user.role === UserRole.CUSTOMER &&
@@ -99,9 +142,20 @@ export class OrdersService {
     user: User,
   ): Promise<Order> {
     const order = await this.findOne(id, user);
-
-    // State machine দিয়ে transition করো
     const updatedOrder = this.stateMachine.transition(order, dto.status);
-    return this.orderRepository.save(updatedOrder);
+    const saved = await this.orderRepository.save(updatedOrder);
+
+    // Status change এ customer কে notify করো
+    await this.orderQueue.add(
+      ORDER_JOBS.SEND_DELIVERY_UPDATE,
+      {
+        orderId: saved.id,
+        customerEmail: order.customer?.email,
+        status: saved.status,
+      },
+      { attempts: 3 }
+    );
+
+    return saved;
   }
 }
