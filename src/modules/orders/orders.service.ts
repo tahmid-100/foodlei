@@ -16,6 +16,8 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderStateMachineService } from './order-state-machine.service';
 import { QUEUES, ORDER_JOBS } from '../../common/constants/queue.constants';
 import { OrderStatus } from './enums/order-status.enum';
+import { OrdersGateway } from './gateways/orders.gateway';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class OrdersService {
@@ -27,6 +29,8 @@ export class OrdersService {
     private readonly stateMachine: OrderStateMachineService,
     @InjectQueue(QUEUES.ORDER)
     private readonly orderQueue: Queue,   // ← Queue inject
+      @Inject(forwardRef(() => OrdersGateway))
+    private readonly ordersGateway: OrdersGateway,
   ) {}
 
   async create(dto: CreateOrderDto, customer: User): Promise<Order> {
@@ -99,6 +103,13 @@ export class OrdersService {
       },
       { attempts: 3 }
     );
+
+        // WebSocket — সব connected clients কে new order জানাও
+    this.ordersGateway.broadcastToAll('new-order', {
+      orderId: saved.id,
+      restaurantId: saved.restaurantId,
+      totalAmount: saved.totalAmount,
+    });
     
 
     return saved;
@@ -156,6 +167,24 @@ export class OrdersService {
       { attempts: 3 }
     );
 
+
+        // ── WebSocket — order watchers কে notify করো ──
+    this.ordersGateway.notifyOrderStatus(
+      saved.id,
+      saved.status,
+      {
+        deliveryAddress: saved.deliveryAddress,
+        confirmedAt: saved.confirmedAt,
+        preparedAt: saved.preparedAt,
+        deliveredAt: saved.deliveredAt,
+      }
+    );
+
     return saved;
+  }
+
+  
+async findById(id: number): Promise<Order | null> {
+  return this.orderRepository.findOne({ where: { id } });
   }
 }
