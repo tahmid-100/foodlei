@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
+import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -43,6 +44,8 @@ async function bootstrap() {
     new GlobalExceptionFilter(),
     new ThrottlerExceptionFilter(),
   );
+
+  app.useGlobalInterceptors(new CacheDebugInterceptor());
 
   // 6. Swagger (non-production only)
   if (process.env.NODE_ENV !== 'production') {

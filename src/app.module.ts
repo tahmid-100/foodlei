@@ -14,6 +14,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { BullModule } from '@nestjs/bullmq';
 import { QUEUES } from './common/constants/queue.constants';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
 
 @Module({
   imports: [
@@ -67,6 +69,18 @@ import { QUEUES } from './common/constants/queue.constants';
   name: QUEUES.ORDER,
   adapter: BullMQAdapter,
 }),
+
+   CacheModule.registerAsync({
+  isGlobal: true,    // সব module এ available
+  useFactory: async () => ({
+    ...redisStore,
+    socket: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT ||'6379'),
+    },
+    ttl: 60 * 1000,  // default: 60 seconds (milliseconds এ)
+  }),
+    }),
 
 
 
