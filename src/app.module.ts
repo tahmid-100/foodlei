@@ -12,6 +12,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { BullModule } from '@nestjs/bullmq';
 import { QUEUES } from './common/constants/queue.constants';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -19,6 +20,19 @@ import { redisStore } from 'cache-manager-redis-yet';
 
 @Module({
   imports: [
+
+
+      ThrottlerModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (config: ConfigService) => ([
+    {
+      name: 'short',
+      ttl: config.get<number>('THROTTLE_TTL')??6000,
+      limit: config.get<number>('THROTTLE_LIMIT')??100,
+    },
+    ]),
+   }), 
   
       // ১. Config — সব জায়গায় .env পড়তে পারব
     ConfigModule.forRoot({
@@ -45,18 +59,6 @@ import { redisStore } from 'cache-manager-redis-yet';
       inject: [ConfigService],
     }),
 
-         
-  ThrottlerModule.forRootAsync({
-  imports: [ConfigModule],
-  inject: [ConfigService],
-  useFactory: (config: ConfigService) => ([
-    {
-      name: 'short',
-      ttl: config.get<number>('THROTTLE_TTL')??6000,
-      limit: config.get<number>('THROTTLE_LIMIT')??100,
-    },
-    ]),
-   }), 
 
    BullModule.forRoot({
   connection: {
@@ -87,6 +89,7 @@ import { redisStore } from 'cache-manager-redis-yet';
     RestaurantsModule,
     AuthModule,
     OrdersModule,
+    PaymentsModule,
 
 
   ],

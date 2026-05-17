@@ -7,11 +7,13 @@ import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
 import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
+import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
-
+   const app = await NestFactory.create(AppModule, {
+    rawBody: true,   // ← এটা যোগ করো
+  });
   // 1. Security Headers
   app.use(helmet());
 
@@ -44,8 +46,10 @@ async function bootstrap() {
     new GlobalExceptionFilter(),
     new ThrottlerExceptionFilter(),
   );
-
+ 
+  
   app.useGlobalInterceptors(new CacheDebugInterceptor());
+  
 
   // 6. Swagger (non-production only)
   if (process.env.NODE_ENV !== 'production') {
