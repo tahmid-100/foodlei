@@ -51,20 +51,19 @@ async function bootstrap() {
   app.useGlobalInterceptors(new CacheDebugInterceptor());
   
 
-  // 6. Swagger (non-production only)
-  if (process.env.NODE_ENV !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('Foodeli API')
-      .setDescription('Food Ordering System')
-      .setVersion('1.0')
-      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
-      .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: { persistAuthorization: true },
-    });
-    logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
-  }
+  // 6. Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Foodeli API')
+    .setDescription('Food Ordering System')
+    .setVersion('1.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+  logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
+  
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
