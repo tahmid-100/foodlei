@@ -8,7 +8,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
 import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
 import * as express from 'express';
-const x: string = 123;
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
    const app = await NestFactory.create(AppModule, {
