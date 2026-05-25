@@ -60,30 +60,37 @@ import { redisStore } from 'cache-manager-redis-yet';
     }),
 
 
-   BullModule.forRoot({
-  connection: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-   },
-   }),
-
-   BullBoardModule.forFeature({
-  name: QUEUES.ORDER,
-  adapter: BullMQAdapter,
-}),
-
-   CacheModule.registerAsync({
-  isGlobal: true,    // সব module এ available
-  useFactory: async () => ({
-    ...redisStore,
-    socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT ||'6379'),
-    },
-    ttl: 60 * 1000,  // default: 60 seconds (milliseconds এ)
-  }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        connection: configService.get('REDIS_URL')
+          ? { url: configService.get('REDIS_URL') }  // URL দিয়ে connect (password সহ)
+          : {
+              host: configService.get('REDIS_HOST') || 'localhost',
+              port: parseInt(configService.get('REDIS_PORT') || '6379'),
+            },
+      }),
+      inject: [ConfigService],
     }),
 
+    BullBoardModule.forFeature({
+      name: QUEUES.ORDER,
+      adapter: BullMQAdapter,
+    }),
+
+  CacheModule.registerAsync({
+  isGlobal: true,
+  useFactory: async (configService: ConfigService) => ({
+    store: redisStore,
+    url: configService.get('REDIS_URL') || undefined,
+    socket: configService.get('REDIS_URL') ? undefined : {
+      host: configService.get('REDIS_HOST') || 'localhost',
+      port: parseInt(configService.get('REDIS_PORT') || '6379'),
+    },
+    ttl: 60 * 1000,
+  }),
+  inject: [ConfigService],
+}),
 
 
     RestaurantsModule,
