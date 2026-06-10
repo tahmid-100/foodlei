@@ -165,10 +165,18 @@ export class RestaurantsService {
 
 //--------helpers---------
 private async invalidateRestaurantCache(): Promise<void> {
-  const client = (this.cacheManager as any).store.client; // Redis client
-  const keys = await client.keys('restaurants:*'); // সব restaurant keys
-  if (keys.length > 0) {
-    await client.del(keys); // একসাথে সব delete
+  try {
+    // cache-manager v7: store may live at .store or .stores[0]
+    const store = (this.cacheManager as any).store
+      ?? (this.cacheManager as any).stores?.[0];
+    if (!store?.keys) return;
+    const keys: string[] = await store.keys('restaurants:*');
+    if (keys.length > 0) {
+      await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
+    }
+  } catch (err) {
+    // Cache invalidation failure must not break the write operation
+    console.warn('Cache invalidation skipped:', (err as Error).message);
   }
 }
 
