@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
 import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import * as express from 'express';
 
 async function bootstrap() {
@@ -49,6 +50,7 @@ async function bootstrap() {
  
   
   app.useGlobalInterceptors(new CacheDebugInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor());
   
 
   // 6. Swagger
