@@ -29,6 +29,7 @@ export class RestaurantsController {
   @HttpCode(HttpStatus.CREATED)  // 201
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
+  @ApiBearerAuth('JWT')
   @ApiOperation({ summary: 'নতুন restaurant তৈরি করো' })
   @ApiResponse({ status: 201, description: 'Restaurant তৈরি হয়েছে', type: Restaurant })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
@@ -57,8 +58,9 @@ export class RestaurantsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Restaurant আংশিক update করো' })
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Restaurant আংশিক update করো' })
   @ApiParam({ name: 'id', description: 'Restaurant ID' })
   @ApiResponse({ status: 200, description: 'Updated successfully', type: Restaurant })
   update(
@@ -71,7 +73,8 @@ export class RestaurantsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)  // 204 — body নেই
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)   // শুধু ADMIN delete করতে পারবে 
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT')
   @ApiOperation({ summary: 'Restaurant soft delete করো' })
   @ApiResponse({ status: 204, description: 'Deleted successfully' })
   @ApiResponse({ status: 404, description: 'Restaurant not found' })
