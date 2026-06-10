@@ -13,6 +13,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import {HealthModule} from './modules/health/health.module';
 import { BullModule } from '@nestjs/bullmq';
 import { QUEUES } from './common/constants/queue.constants';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -97,6 +98,7 @@ import { redisStore } from 'cache-manager-redis-yet';
     AuthModule,
     OrdersModule,
     PaymentsModule,
+    HealthModule,
 
 
   ],
