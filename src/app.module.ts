@@ -74,6 +74,10 @@ import { redisStore } from 'cache-manager-redis-yet';
       inject: [ConfigService],
     }),
 
+    BullBoardModule.forRoot({
+      route: '/queues',
+      adapter: ExpressAdapter,
+    }),
     BullBoardModule.forFeature({
       name: QUEUES.ORDER,
       adapter: BullMQAdapter,
