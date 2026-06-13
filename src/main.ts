@@ -8,11 +8,12 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.filter';
 import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import * as express from 'express';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter as BullExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
+import { JwtService } from '@nestjs/jwt';
+import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -57,21 +58,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   
 
-  // 6. Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Foodeli API')
-    .setDescription('Food Ordering System')
-    .setVersion('1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
-  logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
-  
-
-  // Bull Board — mounted directly on Express to avoid global-prefix conflicts
+  // 6. Bull Board — mounted directly on Express to avoid global-prefix conflicts
   const bullAdapter = new BullExpressAdapter();
   bullAdapter.setBasePath('/queues');
   const redisConnection = process.env.REDIS_URL
@@ -84,7 +71,55 @@ async function bootstrap() {
     queues: [new BullMQAdapter(new Queue('order-queue', { connection: redisConnection }))],
     serverAdapter: bullAdapter,
   });
-  app.getHttpAdapter().getInstance().use('/queues', bullAdapter.getRouter());
+
+  // Admin-only guard for /queues (Express middleware — bypasses NestJS guards)
+  const jwtService = new JwtService({ secret: process.env.JWT_ACCESS_SECRET });
+  const bullBoardGuard = (req: Request, res: Response, next: NextFunction) => {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ statusCode: 401, message: 'Unauthorized' });
+    }
+    try {
+      const payload = jwtService.verify<{ role: string }>(auth.slice(7));
+      if (payload.role !== 'admin') {
+        return res.status(403).json({ statusCode: 403, message: 'Forbidden: admin only' });
+      }
+      next();
+    } catch {
+      return res.status(401).json({ statusCode: 401, message: 'Invalid or expired token' });
+    }
+  };
+
+  app.getHttpAdapter().getInstance().use('/queues', bullBoardGuard, bullAdapter.getRouter());
+
+  // 7. Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Foodeli API')
+    .setDescription('Food Ordering System')
+    .setVersion('1.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+
+  // Manually document the Bull Board endpoint (served outside NestJS routing)
+  document.paths['/queues'] = {
+    get: {
+      tags: ['Bull Board'],
+      summary: 'Queue monitoring dashboard (admin only)',
+      description: 'Opens the Bull Board UI. Requires a valid admin JWT in the Authorization header.',
+      security: [{ JWT: [] }],
+      responses: {
+        200: { description: 'Bull Board UI' },
+        401: { description: 'Missing or invalid token' },
+        403: { description: 'Forbidden — admin role required' },
+      },
+    } as any,
+  };
+
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+  logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
