@@ -9,6 +9,10 @@ import { ThrottlerExceptionFilter } from './common/guards/throttler-exception.fi
 import { CacheDebugInterceptor } from './common/interceptors/cache-debug.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import * as express from 'express';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter as BullExpressAdapter } from '@bull-board/express';
+import { Queue } from 'bullmq';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -66,6 +70,21 @@ async function bootstrap() {
   });
   logger.log(`📚 Swagger: http://localhost:${process.env.PORT || 3000}/api/docs`);
   
+
+  // Bull Board — mounted directly on Express to avoid global-prefix conflicts
+  const bullAdapter = new BullExpressAdapter();
+  bullAdapter.setBasePath('/queues');
+  const redisConnection = process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL }
+    : {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      };
+  createBullBoard({
+    queues: [new BullMQAdapter(new Queue('order-queue', { connection: redisConnection }))],
+    serverAdapter: bullAdapter,
+  });
+  app.getHttpAdapter().getInstance().use('/queues', bullAdapter.getRouter());
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

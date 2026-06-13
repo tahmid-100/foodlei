@@ -4,9 +4,6 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullBoardModule } from '@bull-board/nestjs';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { ExpressAdapter } from '@bull-board/express';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -15,7 +12,6 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import {HealthModule} from './modules/health/health.module';
 import { BullModule } from '@nestjs/bullmq';
-import { QUEUES } from './common/constants/queue.constants';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 
@@ -72,15 +68,6 @@ import { redisStore } from 'cache-manager-redis-yet';
             },
       }),
       inject: [ConfigService],
-    }),
-
-    BullBoardModule.forRoot({
-      route: '/queues',
-      adapter: ExpressAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: QUEUES.ORDER,
-      adapter: BullMQAdapter,
     }),
 
   CacheModule.registerAsync({
