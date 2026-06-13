@@ -76,11 +76,12 @@ async function bootstrap() {
   const jwtService = new JwtService({ secret: process.env.JWT_ACCESS_SECRET });
   const bullBoardGuard = (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers.authorization;
-    if (!auth?.startsWith('Bearer ')) {
+    const rawToken = auth?.startsWith('Bearer ') ? auth.slice(7) : (req.query.token as string);
+    if (!rawToken) {
       return res.status(401).json({ statusCode: 401, message: 'Unauthorized' });
     }
     try {
-      const payload = jwtService.verify<{ role: string }>(auth.slice(7));
+      const payload = jwtService.verify<{ role: string }>(rawToken);
       if (payload.role !== 'admin') {
         return res.status(403).json({ statusCode: 403, message: 'Forbidden: admin only' });
       }
