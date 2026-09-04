@@ -30,7 +30,7 @@ export class RestaurantsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.RESTAURANT_OWNER)
   @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'নতুন restaurant তৈরি করো' })
+  @ApiOperation({ summary: 'Create a new restaurant' })
   @ApiResponse({ status: 201, description: 'Restaurant তৈরি হয়েছে', type: Restaurant })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 409, description: 'Phone number already exists' })
@@ -40,7 +40,7 @@ export class RestaurantsController {
 
 
   @Get()
-  @ApiOperation({ summary: 'সব restaurants এর list (paginated)' })
+  @ApiOperation({ summary: 'List all restaurants (paginated)' })
   @ApiResponse({ status: 200, description: 'Paginated restaurant list' })
   @SkipThrottle()
   findAll(@Query() filters: FilterRestaurantDto) {
@@ -48,7 +48,7 @@ export class RestaurantsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'একটা restaurant এর details' })
+  @ApiOperation({ summary: 'Get restaurant details' })
   @ApiParam({ name: 'id', description: 'Restaurant ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Restaurant found', type: Restaurant })
   @ApiResponse({ status: 404, description: 'Restaurant not found' })
@@ -60,7 +60,7 @@ export class RestaurantsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'Restaurant আংশিক update করো' })
+  @ApiOperation({ summary: 'Partially update a restaurant' })
   @ApiParam({ name: 'id', description: 'Restaurant ID' })
   @ApiResponse({ status: 200, description: 'Updated successfully', type: Restaurant })
   update(
@@ -75,7 +75,7 @@ export class RestaurantsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'Restaurant soft delete করো' })
+  @ApiOperation({ summary: 'Soft-delete a restaurant' })
   @ApiResponse({ status: 204, description: 'Deleted successfully' })
   @ApiResponse({ status: 404, description: 'Restaurant not found' })
   remove(@Param('id', ParseIntPipe) id: number) {
