@@ -2,7 +2,7 @@
 
 A production-ready **NestJS** backend for a food ordering platform, featuring real-time order tracking, background job processing, Redis caching, and comprehensive security.
 
-> ⚠️ **About the live demo**: This project was previously deployed on [Railway](https://railway.app), but the free-trial credit has since expired, so the old links (`foodlei-production.up.railway.app`) no longer resolve. The app is fully runnable locally via Docker — see [Getting Started](#getting-started) — and this README documents the architecture in detail so you can understand the system without a live instance.
+> ⚠️ **live demo**:https://foodeli-backend-l4i5.onrender.com/api/docs 
 
 💻 **GitHub**: https://github.com/tahmid-100/foodlei
 
