@@ -2,7 +2,7 @@
 
 A production-ready **NestJS** backend for a food ordering platform, featuring real-time order tracking, background job processing, Redis caching, and comprehensive security.
 
-> ⚠️ **live demo**:https://foodeli-backend-l4i5.onrender.com/api/docs 
+>  **live demo**:https://foodeli-backend-l4i5.onrender.com/api/docs 
 
 💻 **GitHub**: https://github.com/tahmid-100/foodlei
 
