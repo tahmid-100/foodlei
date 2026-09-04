@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -40,47 +41,71 @@ import { redisStore } from 'cache-manager-redis-yet';
 
 
         // ২. Database connection
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
+     
+        // src/app.module.ts
+TypeOrmModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService): TypeOrmModuleOptions => {
+    const databaseUrl = config.get<string>('DATABASE_URL');
+
+    if (databaseUrl) {
+      return {
         type: 'postgres',
-        host: configService.get('database.host'),
-        port: configService.get('database.port'),
-        username: configService.get('database.username'),
-        password: configService.get('database.password'),
-        database: configService.get('database.name'),
+        url: databaseUrl,
+        ssl: { rejectUnauthorized: false },
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,     // ⚠️ development only!
-        logging: true,
-      }),
-      inject: [ConfigService],
-    }),
+        synchronize: true,
+        logging: false,
+      };
+    }
+
+    return {
+      type: 'postgres',
+      host: config.get<string>('DB_HOST'),
+      port: config.get<number>('DB_PORT'),
+      username: config.get<string>('DB_USERNAME'),
+      password: config.get<string>('DB_PASSWORD'),
+      database: config.get<string>('DB_NAME'),
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: true,
+      logging: false,
+    };
+  },
+  inject: [ConfigService],
+}),
 
 
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: configService.get('REDIS_URL')
-          ? { url: configService.get('REDIS_URL') }  // URL দিয়ে connect (password সহ)
-          : {
-              host: configService.get('REDIS_HOST') || 'localhost',
-              port: parseInt(configService.get('REDIS_PORT') || '6379'),
-            },
-      }),
-      inject: [ConfigService],
-    }),
-
-  CacheModule.registerAsync({
-  isGlobal: true,
-  useFactory: async (configService: ConfigService) => ({
-    store: redisStore,
-    url: configService.get('REDIS_URL') || undefined,
-    socket: configService.get('REDIS_URL') ? undefined : {
-      host: configService.get('REDIS_HOST') || 'localhost',
-      port: parseInt(configService.get('REDIS_PORT') || '6379'),
-    },
-    ttl: 60 * 1000,
+   BullModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService) => ({
+    connection: config.get('REDIS_URL')
+      ? { url: config.get('REDIS_URL') }
+      : {
+          host: config.get('REDIS_HOST') || 'localhost',
+          port: config.get<number>('REDIS_PORT') || 6379,
+        },
   }),
+  inject: [ConfigService],
+}),
+
+CacheModule.registerAsync({
+  isGlobal: true,
+  imports: [ConfigModule],
+  useFactory: async (config: ConfigService) => {
+    const redisUrl = config.get('REDIS_URL');
+    return {
+      store: redisStore,
+      ...(redisUrl
+        ? { url: redisUrl }
+        : {
+            socket: {
+              host: config.get('REDIS_HOST') || 'localhost',
+              port: config.get<number>('REDIS_PORT') || 6379,
+            },
+          }),
+      ttl: 60 * 1000,
+    };
+  },
   inject: [ConfigService],
 }),
 
