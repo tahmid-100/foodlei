@@ -35,7 +35,7 @@ export class PaymentsController {
   @Get('order/:orderId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'Order এর payment history' })
+  @ApiOperation({ summary: 'View order payment history' })
   getOrderPayments(@Param('orderId', ParseIntPipe) orderId: number) {
     return this.paymentsService.getOrderPayments(orderId);
   }

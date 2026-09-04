@@ -20,14 +20,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'নতুন account তৈরি করো' })
+  @ApiOperation({ summary: 'Create a new account' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login করো' })
+  @ApiOperation({ summary: 'Log in' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -35,7 +35,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)       // ← এই route protected!
   @ApiBearerAuth('JWT')
-  @ApiOperation({ summary: 'আমার profile দেখো' })
+  @ApiOperation({ summary: 'View my profile' })
   getMe(@CurrentUser() user: User) {
     const { password, ...result } = user as any;
     return result;
@@ -46,7 +46,7 @@ export class AuthController {
 @UseGuards(JwtAuthGuard)
 @HttpCode(HttpStatus.OK)
 @ApiBearerAuth('JWT')
-@ApiOperation({ summary: 'Logout করো' })
+@ApiOperation({ summary: 'Log out' })
 logout(@CurrentUser() user: User) {
   return this.authService.logout(user.id);
 }
@@ -55,7 +55,7 @@ logout(@CurrentUser() user: User) {
 @UseGuards(JwtRefreshGuard)
 @HttpCode(HttpStatus.OK)
 @ApiBearerAuth('JWT')
-@ApiOperation({ summary: 'নতুন Access Token নাও' })
+  @ApiOperation({ summary: 'Get a new access token' })
 refresh(@CurrentUser() user: any) {
   return this.authService.refreshTokens(user.sub, user.refreshToken);
 }
@@ -64,7 +64,7 @@ refresh(@CurrentUser() user: any) {
 // Google login শুরু করে
 @Get('google')
 @UseGuards(GoogleAuthGuard)
-@ApiOperation({ summary: 'Google দিয়ে login শুরু করো' })
+  @ApiOperation({ summary: 'Start Google login' })
 googleAuth() {
   // NestJS automatically Google এ redirect করবে
 }

@@ -22,19 +22,19 @@ export class OrdersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'নতুন order দাও' })
+  @ApiOperation({ summary: 'Place a new order' })
   create(@Body() dto: CreateOrderDto, @CurrentUser() user: User) {
     return this.ordersService.create(dto, user);
   }
 
   @Get('my')
-  @ApiOperation({ summary: 'আমার সব orders' })
+  @ApiOperation({ summary: 'View all my orders' })
   getMyOrders(@CurrentUser() user: User) {
     return this.ordersService.findMyOrders(user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'একটা order এর details' })
+  @ApiOperation({ summary: 'Get order details' })
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: User,
